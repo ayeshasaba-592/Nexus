@@ -7,11 +7,13 @@ export interface User {
   role: UserRole;
   avatarUrl: string;
   bio: string;
+  location?: string;
   isOnline?: boolean;
   createdAt: string;
 }
 
 export interface Entrepreneur extends User {
+  _id: string | undefined;
   role: 'entrepreneur';
   startupName: string;
   pitchSummary: string;
@@ -20,9 +22,11 @@ export interface Entrepreneur extends User {
   location: string;
   foundedYear: number;
   teamSize: number;
+  stage?: string;
 }
 
 export interface Investor extends User {
+  _id: string | undefined;
   role: 'investor';
   investmentInterests: string[];
   investmentStage: string[];
@@ -30,6 +34,7 @@ export interface Investor extends User {
   totalInvestments: number;
   minimumInvestment: string;
   maximumInvestment: string;
+  location?: string;
 }
 
 export interface Message {

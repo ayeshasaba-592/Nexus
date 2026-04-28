@@ -1,195 +1,114 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { Send, Phone, Video, Info, Smile } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Send, Video, Phone, MoreVertical, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { findUserById } from '../../data/users';
+import { getMessagesBetweenUsers, sendMessage } from '../../data/messages';
+import { ChatMessage } from '../../components/chat/ChatMessage';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { ChatMessage } from '../../components/chat/ChatMessage';
-import { ChatUserList } from '../../components/chat/ChatUserList';
-import { useAuth } from '../../context/AuthContext';
 import { Message } from '../../types';
-import { findUserById } from '../../data/users';
-import { getMessagesBetweenUsers, sendMessage, getConversationsForUser } from '../../data/messages';
-import { MessageCircle } from 'lucide-react';
 
 export const ChatPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
+  
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [conversations, setConversations] = useState<any[]>([]);
-  const messagesEndRef = useRef<null | HTMLDivElement>(null);
-  
+  const [input, setInput] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const chatPartner = userId ? findUserById(userId) : null;
-  
+
+  // 1. Sync messages when user or recipient changes
   useEffect(() => {
-    // Load conversations
-    if (currentUser) {
-      setConversations(getConversationsForUser(currentUser.id));
-    }
-  }, [currentUser]);
-  
-  useEffect(() => {
-    // Load messages between users
     if (currentUser && userId) {
-      setMessages(getMessagesBetweenUsers(currentUser.id, userId));
+      const history = getMessagesBetweenUsers(currentUser.id, userId);
+      setMessages(history);
     }
   }, [currentUser, userId]);
-  
+
+  // 2. Auto-scroll to bottom
   useEffect(() => {
-    // Scroll to bottom of messages
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-  
-  const handleSendMessage = (e: React.FormEvent) => {
+
+  const onSend = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!newMessage.trim() || !currentUser || !userId) return;
-    
-    const message = sendMessage({
+    if (!input.trim() || !currentUser || !userId) return;
+
+    const newMsg = sendMessage({
       senderId: currentUser.id,
       receiverId: userId,
-      content: newMessage
+      content: input
     });
-    
-    setMessages([...messages, message]);
-    setNewMessage('');
-    
-    // Update conversations
-    setConversations(getConversationsForUser(currentUser.id));
+
+    setMessages([...messages, newMsg]);
+    setInput('');
   };
-  
-  if (!currentUser) return null;
-  
-  return (
-    <div className="flex h-[calc(100vh-4rem)] bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in">
-      {/* Conversations sidebar */}
-      <div className="hidden md:block w-1/3 lg:w-1/4 border-r border-gray-200">
-        <ChatUserList conversations={conversations} />
+
+  if (!currentUser || !chatPartner) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-gray-500">
+        <p>User not found.</p>
+        <Button onClick={() => navigate('/messages')} variant="ghost">Back to Messages</Button>
       </div>
-      
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col">
-        {/* Chat header */}
-        {chatPartner ? (
-          <>
-            <div className="border-b border-gray-200 p-4 flex justify-between items-center">
-              <div className="flex items-center">
-                <Avatar
-                  src={chatPartner.avatarUrl}
-                  alt={chatPartner.name}
-                  size="md"
-                  status={chatPartner.isOnline ? 'online' : 'offline'}
-                  className="mr-3"
-                />
-                
-                <div>
-                  <h2 className="text-lg font-medium text-gray-900">{chatPartner.name}</h2>
-                  <p className="text-sm text-gray-500">
-                    {chatPartner.isOnline ? 'Online' : 'Last seen recently'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full p-2"
-                  aria-label="Voice call"
-                >
-                  <Phone size={18} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full p-2"
-                  aria-label="Video call"
-                >
-                  <Video size={18} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full p-2"
-                  aria-label="Info"
-                >
-                  <Info size={18} />
-                </Button>
-              </div>
-            </div>
-            
-            {/* Messages container */}
-            <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
-              {messages.length > 0 ? (
-                <div className="space-y-4">
-                  {messages.map(message => (
-                    <ChatMessage
-                      key={message.id}
-                      message={message}
-                      isCurrentUser={message.senderId === currentUser.id}
-                    />
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center">
-                  <div className="bg-gray-100 p-4 rounded-full mb-4">
-                    <MessageCircle size={32} className="text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-700">No messages yet</h3>
-                  <p className="text-gray-500 mt-1">Send a message to start the conversation</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Message input */}
-            <div className="border-t border-gray-200 p-4">
-              <form onSubmit={handleSendMessage} className="flex space-x-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full p-2"
-                  aria-label="Add emoji"
-                >
-                  <Smile size={20} />
-                </Button>
-                
-                <Input
-                  type="text"
-                  placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  fullWidth
-                  className="flex-1"
-                />
-                
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={!newMessage.trim()}
-                  className="rounded-full p-2 w-10 h-10 flex items-center justify-center"
-                  aria-label="Send message"
-                >
-                  <Send size={18} />
-                </Button>
-              </form>
-            </div>
-          </>
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center p-4">
-            <div className="bg-gray-100 p-6 rounded-full mb-4">
-              <MessageCircle size={48} className="text-gray-400" />
-            </div>
-            <h2 className="text-xl font-medium text-gray-700">Select a conversation</h2>
-            <p className="text-gray-500 mt-2 text-center">
-              Choose a contact from the list to start chatting
-            </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-6rem)] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b flex justify-between items-center bg-white">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" className="md:hidden" onClick={() => navigate(-1)}>
+            <ArrowLeft size={20} />
+          </Button>
+          <Avatar src={chatPartner.avatarUrl} alt={chatPartner.name} size="md" status={chatPartner.isOnline ? 'online' : 'offline'} />
+          <div>
+            <h2 className="font-bold text-gray-900 leading-none">{chatPartner.name}</h2>
+            <span className="text-xs text-green-500 font-medium">{chatPartner.isOnline ? 'Active Now' : 'Offline'}</span>
           </div>
-        )}
+        </div>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" className="rounded-full text-gray-500"><Phone size={18} /></Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="rounded-full text-blue-600 hover:bg-blue-50"
+            onClick={() => window.open(`https://meet.jit.si/Nexus-Meeting-${userId}`, '_blank')}
+          >
+            <Video size={18} />
+          </Button>
+          <Button variant="ghost" size="sm" className="rounded-full text-gray-500"><MoreVertical size={18} /></Button>
+        </div>
+      </div>
+
+      {/* Message List */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/30">
+        {messages.map((m) => (
+          <ChatMessage 
+            key={m.id} 
+            message={m} 
+            isCurrentUser={m.senderId === currentUser.id} 
+          />
+        ))}
+        <div ref={scrollRef} />
+      </div>
+
+      {/* Input Footer */}
+      <div className="p-4 bg-white border-t">
+        <form onSubmit={onSend} className="flex gap-2">
+          <input
+            className="flex-1 bg-gray-100 border-none rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="Type a message..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
+          <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 h-10 w-10 flex items-center justify-center">
+            <Send size={18} />
+          </Button>
+        </form>
       </div>
     </div>
   );

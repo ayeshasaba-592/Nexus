@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import axios from 'axios'; 
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 
@@ -9,18 +9,22 @@ export const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  
-  const { forgotPassword } = useAuth();
+  const [error, setError] = useState<string | null>(null); 
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     
     try {
-      await forgotPassword(email);
+      // 2. CONNECT TO BACKEND
+      // Note: You will need to create this route in your backend later!
+      await axios.post('http://localhost:5000/api/auth/forgot-password', { email });
+      
       setIsSubmitted(true);
-    } catch (error) {
-      // Error is handled by the AuthContext
+    } catch (err: any) {
+      // If the email doesn't exist or server is down
+      setError(err.response?.data?.msg || "Could not send reset email. Please try again.");
     } finally {
       setIsLoading(false);
     }

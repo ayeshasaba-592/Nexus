@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { Lock, AlertCircle } from 'lucide-react'; 
+import axios from 'axios'; 
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 
@@ -9,58 +9,51 @@ export const ResetPasswordPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null); 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  const { resetPassword } = useAuth();
   const token = searchParams.get('token');
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (!token) {
+      setError("Missing reset token.");
       return;
     }
     
     if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
     
     setIsLoading(true);
     
     try {
-      await resetPassword(token, password);
-      navigate('/login');
-    } catch (error) {
-      // Error is handled by the AuthContext
+      // 2. CONNECT TO BACKEND
+      // We pass the token in the URL or the body, depending on your API design
+      const response = await axios.post(`http://localhost:5000/api/auth/reset-password`, {
+        token,
+        password
+      });
+
+      if (response.status === 200) {
+        alert("Password reset successful! Redirecting to login...");
+        navigate('/login');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.msg || "Failed to reset password. Link may be expired.");
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   if (!token) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-gray-900">
-              Invalid reset link
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              This password reset link is invalid or has expired.
-            </p>
-            <Button
-              className="mt-4"
-              onClick={() => navigate('/forgot-password')}
-            >
-              Request new reset link
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    // ... (Keep your "Invalid reset link" view)
   }
-  
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -69,12 +62,17 @@ export const ResetPasswordPage: React.FC = () => {
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             Reset your password
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Enter your new password below
-          </p>
         </div>
         
         <div className="mt-8 bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {/* Display Error Message if it exists */}
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-500 text-red-700 px-4 py-3 rounded flex items-center">
+              <AlertCircle size={18} className="mr-2" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <Input
               label="New password"
@@ -94,7 +92,7 @@ export const ResetPasswordPage: React.FC = () => {
               required
               fullWidth
               startAdornment={<Lock size={18} />}
-              error={password !== confirmPassword ? 'Passwords do not match' : undefined}
+              error={password !== confirmPassword && confirmPassword !== '' ? 'Passwords do not match' : undefined}
             />
             
             <Button

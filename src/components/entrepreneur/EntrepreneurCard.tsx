@@ -1,11 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, ExternalLink } from 'lucide-react';
+import { MessageCircle, ExternalLink, Calendar } from 'lucide-react'; // Added Calendar icon
 import { Entrepreneur } from '../../types';
 import { Card, CardBody, CardFooter } from '../ui/Card';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import API from '../../services/api'; // Import your API bridge
 
 interface EntrepreneurCardProps {
   entrepreneur: Entrepreneur;
@@ -25,6 +26,22 @@ export const EntrepreneurCard: React.FC<EntrepreneurCardProps> = ({
   const handleMessage = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
     navigate(`/chat/${entrepreneur.id}`);
+  };
+
+  // NEW: Logic for Investors to request a meeting with this Entrepreneur
+  const handleRequestMeeting = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    try {
+      await API.post('/meetings/request', {
+        recipientId: entrepreneur.id,
+        title: `Investment Interest: ${entrepreneur.startupName}`,
+        date: new Date().toISOString() 
+      });
+      alert(`Meeting request sent to ${entrepreneur.startupName}!`);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.msg || "Failed to send request";
+      alert(errorMsg);
+    }
   };
   
   return (
@@ -74,7 +91,7 @@ export const EntrepreneurCard: React.FC<EntrepreneurCardProps> = ({
       </CardBody>
       
       {showActions && (
-        <CardFooter className="border-t border-gray-100 bg-gray-50 flex justify-between">
+        <CardFooter className="border-t border-gray-100 bg-gray-50 flex justify-between gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -84,13 +101,14 @@ export const EntrepreneurCard: React.FC<EntrepreneurCardProps> = ({
             Message
           </Button>
           
+          {/* UPDATED BUTTON: Now triggers the real backend request */}
           <Button
             variant="primary"
             size="sm"
-            rightIcon={<ExternalLink size={16} />}
-            onClick={handleViewProfile}
+            leftIcon={<Calendar size={16} />}
+            onClick={handleRequestMeeting}
           >
-            View Profile
+            Connect
           </Button>
         </CardFooter>
       )}

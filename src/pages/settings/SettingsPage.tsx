@@ -1,170 +1,192 @@
-import React from 'react';
-import { User, Lock, Bell, Globe, Palette, CreditCard } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { User, Lock, Bell, Globe, Palette, CreditCard, Camera, Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-hot-toast'; // Optional: for success/error popups
 
 export const SettingsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth() as any; // Assuming your AuthContext has updateProfile
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Local states for the form
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    location: "San Francisco, CA",
+    bio: user?.bio || ''
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
   if (!user) return null;
-  
+
+  // Handle Input Changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Handle Picture Selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // The Actual Database Save Function
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // Logic for Database Update
+      // If using Firebase/MongoDB, you'd send formData + previewImage here
+      await updateProfile({
+        ...formData,
+        avatarUrl: previewImage || user.avatarUrl
+      });
+      
+      toast.success('Profile updated successfully!');
+    } catch (error) {
+      toast.error('Failed to update profile');
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-10">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600">Manage your account preferences and settings</p>
+        <h1 className="text-3xl font-black text-gray-900 tracking-tight">Settings</h1>
+        <p className="text-gray-500 font-medium">Manage your account preferences</p>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Settings navigation */}
-        <Card className="lg:col-span-1">
+        {/* Navigation - Same as before */}
+        <Card className="lg:col-span-1 h-fit">
           <CardBody className="p-2">
             <nav className="space-y-1">
-              <button className="flex items-center w-full px-3 py-2 text-sm font-medium text-primary-700 bg-primary-50 rounded-md">
-                <User size={18} className="mr-3" />
-                Profile
-              </button>
-              
-              <button className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md">
-                <Lock size={18} className="mr-3" />
-                Security
-              </button>
-              
-              <button className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md">
-                <Bell size={18} className="mr-3" />
-                Notifications
-              </button>
-              
-              <button className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md">
-                <Globe size={18} className="mr-3" />
-                Language
-              </button>
-              
-              <button className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md">
-                <Palette size={18} className="mr-3" />
-                Appearance
-              </button>
-              
-              <button className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md">
-                <CreditCard size={18} className="mr-3" />
-                Billing
-              </button>
+              {['Profile', 'Security', 'Notifications', 'Language', 'Appearance', 'Billing'].map((item, idx) => (
+                <button 
+                  key={item}
+                  className={`flex items-center w-full px-3 py-2 text-sm font-bold rounded-xl transition-colors ${idx === 0 ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  {item === 'Profile' && <User size={18} className="mr-3" />}
+                  {item === 'Security' && <Lock size={18} className="mr-3" />}
+                  {item}
+                </button>
+              ))}
             </nav>
           </CardBody>
         </Card>
         
-        {/* Main settings content */}
         <div className="lg:col-span-3 space-y-6">
           {/* Profile Settings */}
-          <Card>
-            <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Profile Settings</h2>
+          <Card className="border-2 border-gray-100 shadow-xl overflow-hidden">
+            <CardHeader className="bg-gray-50/50 border-b">
+              <h2 className="text-lg font-black text-gray-900 uppercase tracking-tighter">Profile Details</h2>
             </CardHeader>
-            <CardBody className="space-y-6">
-              <div className="flex items-center gap-6">
-                <Avatar
-                  src={user.avatarUrl}
-                  alt={user.name}
-                  size="xl"
-                />
+            <CardBody className="space-y-8 p-8">
+              
+              {/* Profile Picture Upload */}
+              <div className="flex flex-col sm:flex-row items-center gap-8 bg-blue-50/30 p-6 rounded-2xl border border-blue-100">
+                <div className="relative group">
+                  <Avatar
+                    src={previewImage || user.avatarUrl}
+                    alt={user.name}
+                    size="xl"
+                    className="ring-4 ring-white shadow-2xl"
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <Camera className="text-white" size={24} />
+                  </button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    hidden 
+                    accept="image/*" 
+                    onChange={handleFileChange} 
+                  />
+                </div>
                 
-                <div>
-                  <Button variant="outline" size="sm">
-                    Change Photo
+                <div className="text-center sm:text-left">
+                  <h3 className="font-bold text-gray-900">Profile Photo</h3>
+                  <p className="text-xs text-gray-500 mb-3">JPG or PNG. Max 800KB.</p>
+                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                    Upload New Image
                   </Button>
-                  <p className="mt-2 text-sm text-gray-500">
-                    JPG, GIF or PNG. Max size of 800K
-                  </p>
                 </div>
               </div>
               
+              {/* Form Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input
                   label="Full Name"
-                  defaultValue={user.name}
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="font-medium"
                 />
                 
                 <Input
-                  label="Email"
+                  label="Email Address"
+                  name="email"
                   type="email"
-                  defaultValue={user.email}
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="font-medium"
                 />
                 
                 <Input
-                  label="Role"
+                  label="Current Role"
                   value={user.role}
                   disabled
+                  className="bg-gray-50 cursor-not-allowed opacity-70"
                 />
                 
                 <Input
                   label="Location"
-                  defaultValue="San Francisco, CA"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  className="font-medium"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bio
+                <label className="block text-sm font-black text-gray-700 mb-2 uppercase tracking-tight">
+                  Bio / Business Summary
                 </label>
                 <textarea
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  name="bio"
+                  className="w-full rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-4 transition-all"
                   rows={4}
-                  defaultValue={user.bio}
+                  value={formData.bio}
+                  onChange={handleChange}
+                  placeholder="Tell us about your background..."
                 ></textarea>
               </div>
               
-              <div className="flex justify-end gap-3">
-                <Button variant="outline">Cancel</Button>
-                <Button>Save Changes</Button>
-              </div>
-            </CardBody>
-          </Card>
-          
-          {/* Security Settings */}
-          <Card>
-            <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Security Settings</h2>
-            </CardHeader>
-            <CardBody className="space-y-6">
-              <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-4">Two-Factor Authentication</h3>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">
-                      Add an extra layer of security to your account
-                    </p>
-                    <Badge variant="error" className="mt-1">Not Enabled</Badge>
-                  </div>
-                  <Button variant="outline">Enable</Button>
-                </div>
-              </div>
-              
-              <div className="pt-6 border-t border-gray-200">
-                <h3 className="text-sm font-medium text-gray-900 mb-4">Change Password</h3>
-                <div className="space-y-4">
-                  <Input
-                    label="Current Password"
-                    type="password"
-                  />
-                  
-                  <Input
-                    label="New Password"
-                    type="password"
-                  />
-                  
-                  <Input
-                    label="Confirm New Password"
-                    type="password"
-                  />
-                  
-                  <div className="flex justify-end">
-                    <Button>Update Password</Button>
-                  </div>
-                </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" className="font-bold">Discard Changes</Button>
+                <Button 
+                  onClick={handleSave} 
+                  disabled={isSaving}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 font-bold flex items-center gap-2"
+                >
+                  {isSaving && <Loader2 size={16} className="animate-spin" />}
+                  {isSaving ? 'Saving...' : 'Save Settings'}
+                </Button>
               </div>
             </CardBody>
           </Card>

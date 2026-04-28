@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, PieChart, Filter, Search, PlusCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -7,41 +7,59 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard';
 import { useAuth } from '../../context/AuthContext';
-import { Entrepreneur } from '../../types';
+// Keep your types
+import { CollaborationRequest } from '../../types';
+// We will still use the list of entrepreneurs, but stats will be live
 import { entrepreneurs } from '../../data/users';
-import { getRequestsFromInvestor } from '../../data/collaborationRequests';
+import API from '../../services/api';
 
 export const InvestorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  const [realRequests, setRealRequests] = useState<CollaborationRequest[]>([]);
   
+  // BRIDGE: Load real meeting/collaboration data from Backend
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (user) {
+        try {
+          const res = await API.get('/meetings/me');
+          // Format backend meetings into the frontend type
+          const formatted = res.data.map((m: any) => ({
+            id: m._id,
+            senderId: m.requester._id,
+            receiverId: m.recipient._id,
+            status: m.status,
+            message: m.title,
+            createdAt: m.date
+          }));
+          setRealRequests(formatted);
+        } catch (err) {
+          console.error("Error fetching live investor stats:", err);
+        }
+      }
+    };
+    fetchStats();
+  }, [user]);
+
   if (!user) return null;
-  
-  // Get collaboration requests sent by this investor
-  const sentRequests = getRequestsFromInvestor(user.id);
-  const requestedEntrepreneurIds = sentRequests.map(req => req.entrepreneurId);
   
   // Filter entrepreneurs based on search and industry filters
   const filteredEntrepreneurs = entrepreneurs.filter(entrepreneur => {
-    // Search filter
     const matchesSearch = searchQuery === '' || 
       entrepreneur.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       entrepreneur.startupName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entrepreneur.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entrepreneur.pitchSummary.toLowerCase().includes(searchQuery.toLowerCase());
+      entrepreneur.industry.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Industry filter
     const matchesIndustry = selectedIndustries.length === 0 || 
       selectedIndustries.includes(entrepreneur.industry);
     
     return matchesSearch && matchesIndustry;
   });
   
-  // Get unique industries for filter
   const industries = Array.from(new Set(entrepreneurs.map(e => e.industry)));
   
-  // Toggle industry selection
   const toggleIndustry = (industry: string) => {
     setSelectedIndustries(prevSelected => 
       prevSelected.includes(industry)
@@ -59,15 +77,13 @@ export const InvestorDashboard: React.FC = () => {
         </div>
         
         <Link to="/entrepreneurs">
-          <Button
-            leftIcon={<PlusCircle size={18} />}
-          >
+          <Button leftIcon={<PlusCircle size={18} />}>
             View All Startups
           </Button>
         </Link>
       </div>
       
-      {/* Filters and search */}
+      {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="w-full md:w-2/3">
           <Input
@@ -78,12 +94,8 @@ export const InvestorDashboard: React.FC = () => {
             startAdornment={<Search size={18} />}
           />
         </div>
-        
-        <div className="w-full md:w-1/3">
-          <div className="flex items-center space-x-2">
+        <div className="w-full md:w-1/3 flex items-center space-x-2">
             <Filter size={18} className="text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Filter by:</span>
-            
             <div className="flex flex-wrap gap-2">
               {industries.map(industry => (
                 <Badge
@@ -96,11 +108,10 @@ export const InvestorDashboard: React.FC = () => {
                 </Badge>
               ))}
             </div>
-          </div>
         </div>
       </div>
       
-      {/* Stats summary */}
+      {/* Stats summary - NOW LIVE */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-primary-50 border border-primary-100">
           <CardBody>
@@ -109,7 +120,7 @@ export const InvestorDashboard: React.FC = () => {
                 <Users size={20} className="text-primary-700" />
               </div>
               <div>
-                <p className="text-sm font-medium text-primary-700">Total Startups</p>
+                <p className="text-sm font-medium text-primary-700">Available Startups</p>
                 <h3 className="text-xl font-semibold text-primary-900">{entrepreneurs.length}</h3>
               </div>
             </div>
@@ -123,7 +134,7 @@ export const InvestorDashboard: React.FC = () => {
                 <PieChart size={20} className="text-secondary-700" />
               </div>
               <div>
-                <p className="text-sm font-medium text-secondary-700">Industries</p>
+                <p className="text-sm font-medium text-secondary-700">Active Industries</p>
                 <h3 className="text-xl font-semibold text-secondary-900">{industries.length}</h3>
               </div>
             </div>
@@ -139,7 +150,8 @@ export const InvestorDashboard: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-accent-700">Your Connections</p>
                 <h3 className="text-xl font-semibold text-accent-900">
-                  {sentRequests.filter(req => req.status === 'accepted').length}
+                  {/* Counts only accepted meetings from the backend */}
+                  {realRequests.filter(req => req.status === 'accepted').length}
                 </h3>
               </div>
             </div>
@@ -153,7 +165,6 @@ export const InvestorDashboard: React.FC = () => {
           <CardHeader>
             <h2 className="text-lg font-medium text-gray-900">Featured Startups</h2>
           </CardHeader>
-          
           <CardBody>
             {filteredEntrepreneurs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -165,19 +176,7 @@ export const InvestorDashboard: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-600">No startups match your filters</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-2"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedIndustries([]);
-                  }}
-                >
-                  Clear filters
-                </Button>
-              </div>
+              <div className="text-center py-8 text-gray-600">No startups match your filters</div>
             )}
           </CardBody>
         </Card>

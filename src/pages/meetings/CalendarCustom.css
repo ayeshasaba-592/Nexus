@@ -1,0 +1,18 @@
+.dot {
+  height: 6px;
+  width: 6px;
+  background-color: #3b82f6; /* Nexus Blue */
+  border-radius: 50%;
+  display: inline-block;
+  margin: 0 auto;
+}
+
+.react-calendar {
+  border: none !important;
+  font-family: inherit !important;
+}
+
+.react-calendar__tile--active {
+  background: #3b82f6 !important;
+  border-radius: 8px;
+}

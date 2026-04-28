@@ -1,33 +1,35 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getConversationsForUser } from '../../data/messages';
 import { ChatUserList } from '../../components/chat/ChatUserList';
-// import { MessageCircle } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
+import { ChatConversation } from '../../types';
 
 export const MessagesPage: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
   
+  useEffect(() => {
+    if (user) {
+      setConversations(getConversationsForUser(user.id));
+    }
+  }, [user]);
+
   if (!user) return null;
   
-  const conversations = getConversationsForUser(user.id);
-  
   return (
-    <div className="h-[calc(100vh-8rem)] bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden animate-fade-in">
-      {conversations.length > 0 ? (
-        <ChatUserList conversations={conversations} />
-      ) : (
-        <div className="h-full flex flex-col items-center justify-center p-8">
-          <div className="bg-gray-100 p-6 rounded-full mb-4">
-            {/* <MessageCircle size={32} className="text-gray-400" /> */}
+    <div className="p-6 space-y-6">
+      <h1 className="text-3xl font-black">Messages</h1>
+      <div className="bg-white rounded-2xl border min-h-[400px]">
+        {conversations.length > 0 ? (
+          <ChatUserList conversations={conversations} />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-[400px]">
+            <MessageSquare size={48} className="text-gray-300 mb-2" />
+            <p className="text-gray-500">No conversations found.</p>
           </div>
-          <h2 className="text-xl font-medium text-gray-900">No messages yet</h2>
-          <p className="text-gray-600 text-center mt-2">
-            Start connecting with entrepreneurs and investors to begin conversations
-          </p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

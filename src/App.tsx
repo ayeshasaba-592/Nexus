@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+// Added ProtectedRoute import
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
 
 // Layouts
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -26,6 +28,10 @@ import { DocumentsPage } from './pages/documents/DocumentsPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { HelpPage } from './pages/help/HelpPage';
 import { DealsPage } from './pages/deals/DealsPage';
+// ADDED: Meetings Page Import
+import { MeetingsPage } from './pages/meetings/MeetingsPage'; 
+import { VideoCall } from './components/video/VideoCall';
+import { WalletPage } from './pages/Wallet/WalletPage';
 
 // Chat Pages
 import { ChatPage } from './pages/chat/ChatPage';
@@ -39,53 +45,69 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           
-          {/* Dashboard Routes */}
-          <Route path="/dashboard" element={<DashboardLayout />}>
-            <Route path="entrepreneur" element={<EntrepreneurDashboard />} />
-            <Route path="investor" element={<InvestorDashboard />} />
+          {/* Dashboard Routes - Protected with specific roles */}
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+            <Route 
+              path="entrepreneur" 
+              element={<ProtectedRoute requiredRole="entrepreneur"><EntrepreneurDashboard /></ProtectedRoute>} 
+            />
+            <Route 
+              path="investor" 
+              element={<ProtectedRoute requiredRole="investor"><InvestorDashboard /></ProtectedRoute>} 
+            />
           </Route>
           
-          {/* Profile Routes */}
-          <Route path="/profile" element={<DashboardLayout />}>
+          {/* Profile Routes - Protected */}
+          <Route path="/profile" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route path="entrepreneur/:id" element={<EntrepreneurProfile />} />
             <Route path="investor/:id" element={<InvestorProfile />} />
           </Route>
           
-          {/* Feature Routes */}
-          <Route path="/investors" element={<DashboardLayout />}>
+          {/* Feature Routes - Protected */}
+          <Route path="/investors" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<InvestorsPage />} />
           </Route>
           
-          <Route path="/entrepreneurs" element={<DashboardLayout />}>
+          <Route path="/entrepreneurs" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<EntrepreneursPage />} />
           </Route>
+
+          {/* ADDED: Meetings Route */}
+          <Route path="/meetings" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+            <Route index element={<MeetingsPage />} />
+          </Route>
           
-          <Route path="/messages" element={<DashboardLayout />}>
+          <Route path="/messages" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<MessagesPage />} />
           </Route>
           
-          <Route path="/notifications" element={<DashboardLayout />}>
+          <Route path="/notifications" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<NotificationsPage />} />
           </Route>
           
-          <Route path="/documents" element={<DashboardLayout />}>
+          <Route path="/documents" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<DocumentsPage />} />
           </Route>
+
+          {/* ADDED: Wallet Route for Milestone 6 */}
+          <Route path="/wallet" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+            <Route index element={<WalletPage />} />
+          </Route>
           
-          <Route path="/settings" element={<DashboardLayout />}>
+          <Route path="/settings" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<SettingsPage />} />
           </Route>
           
-          <Route path="/help" element={<DashboardLayout />}>
+          <Route path="/help" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<HelpPage />} />
           </Route>
           
-          <Route path="/deals" element={<DashboardLayout />}>
+          <Route path="/deals" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<DealsPage />} />
           </Route>
           
-          {/* Chat Routes */}
-          <Route path="/chat" element={<DashboardLayout />}>
+          {/* Chat Routes - Protected */}
+          <Route path="/chat" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<ChatPage />} />
             <Route path=":userId" element={<ChatPage />} />
           </Route>
@@ -95,6 +117,8 @@ function App() {
           
           {/* Catch all other routes and redirect to login */}
           <Route path="*" element={<Navigate to="/login" replace />} />
+
+          <Route path="/video-call/:roomId" element={<VideoCall roomId="test-room" userId="current-user-id" />} />
         </Routes>
       </Router>
     </AuthProvider>
