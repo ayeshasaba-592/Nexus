@@ -12,15 +12,17 @@ const server = http.createServer(app);
 // 1. Initialize Socket.IO with CORS (This defines 'io')
 const io = socketio(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: ["https://nexus-qwymvaguo-ayeshasaba-592s-projects.vercel.app", "http://localhost:5173"],
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
 // 2. MIDDLEWARE
 app.use(express.json());
 app.use(cors({
-  origin: '*', 
+  origin: "https://nexus-qwymvaguo-ayeshasaba-592s-projects.vercel.app",
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'x-auth-token']
 }));
