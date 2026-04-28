@@ -9,34 +9,47 @@ const socketio = require('socket.io');
 const app = express();
 const server = http.createServer(app); 
 
-// 1. Initialize Socket.IO with CORS (This defines 'io')
+// --- UNIVERSAL CORS CONFIGURATION ---
+const liveOrigin = "https://nexus-qwymvaguo-ayeshasaba-592s-projects.vercel.app";
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // 1. Allow no-origin (like mobile apps or Postman)
+    // 2. Allow any localhost port (5173, 5177, etc.)
+    // 3. Allow your specific Vercel URL
+    if (!origin || origin.startsWith('http://localhost:') || origin === liveOrigin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'x-auth-token']
+};
+
+// 1. Initialize Socket.IO with Universal CORS
 const io = socketio(server, {
-  cors: {
-    origin: ["https://nexus-qwymvaguo-ayeshasaba-592s-projects.vercel.app", "http://localhost:5173"],
-    methods: ["GET", "POST"],
-    credentials: true
-  }
+  cors: corsOptions,
+  allowEIO3: true,
+  transports: ['websocket', 'polling'] 
 });
 
 // 2. MIDDLEWARE
 app.use(express.json());
-app.use(cors({
-  origin: "https://nexus-qwymvaguo-ayeshasaba-592s-projects.vercel.app",
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'x-auth-token']
-}));
+app.use(cors(corsOptions)); // Using the same options for Express
 
 // 3. STATIC FOLDERS
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 4. ROUTES (Fixed the leading slash typo)
+// 4. ROUTES
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/profile', require('./routes/profile'));
 app.use('/api/meetings', require('./routes/meetings'));
 app.use('/api/documents', require('./routes/documents')); 
 app.use('/api/transactions', require('./routes/transactions'));
-// 5. SOCKET.IO LOGIC (Now 'io' is defined correctly above)
+
+// 5. SOCKET.IO LOGIC
 io.on('connection', (socket) => {
   console.log('User connected to Socket:', socket.id);
 

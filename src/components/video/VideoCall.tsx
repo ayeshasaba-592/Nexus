@@ -1,51 +1,58 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import Peer from 'simple-peer';
 import { PhoneOff, Mic, Video } from 'lucide-react';
 
-const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+// This line handles both Simple (Local) and Vercel (Live)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const VideoCall = ({ roomId, userId }: { roomId: string, userId: string }) => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const myVideo = useRef<HTMLVideoElement>(null);
   const userVideo = useRef<HTMLVideoElement>(null);
-  const connectionRef = useRef<Peer.Instance>();
+  const socketRef = useRef<Socket>();
 
   useEffect(() => {
-    // 1. Get Camera/Mic permissions
+    // Determine transport: Localhost is fine with polling, but Live usually needs websocket
+    const isLocal = API_URL.includes('localhost');
+    
+    socketRef.current = io(API_URL, {
+      withCredentials: true,
+      transports: isLocal ? ['polling', 'websocket'] : ['websocket'],
+      upgrade: !isLocal ? false : true
+    });
+
+    const socket = socketRef.current;
+
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then((currentStream) => {
         setStream(currentStream);
         if (myVideo.current) myVideo.current.srcObject = currentStream;
 
-        // 2. Join the Socket.io room we set up in server.js
         socket.emit('join-room', roomId, userId);
 
-        // 3. Listen for the other person
         socket.on('user-connected', (id) => {
-          console.log('Investor joined:', id);
-          // Peer connection logic will be triggered here
+          console.log('User connected:', id);
         });
-      });
+      })
+      .catch((err) => console.error("Media Error:", err));
 
     return () => {
       stream?.getTracks().forEach(track => track.stop());
+      socket.disconnect();
     };
   }, [roomId, userId]);
 
   return (
     <div className="flex flex-col items-center bg-gray-900 p-6 rounded-3xl min-h-[400px]">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-        {/* Your Feed */}
         <div className="relative bg-black rounded-2xl overflow-hidden border-2 border-blue-500 aspect-video">
           <video playsInline muted ref={myVideo} autoPlay className="w-full h-full object-cover" />
           <span className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs">You</span>
         </div>
-
-        {/* Investor Feed */}
         <div className="relative bg-black rounded-2xl overflow-hidden border-2 border-gray-700 aspect-video">
           <video playsInline ref={userVideo} autoPlay className="w-full h-full object-cover" />
-          <span className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs">Investor</span>
+          <span className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs">Partner</span>
         </div>
       </div>
 
