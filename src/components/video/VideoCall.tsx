@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import Peer from 'simple-peer';
 import { PhoneOff, Mic, Video } from 'lucide-react';
 
-const socket = io('http://localhost:5000');
+const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
 export const VideoCall = ({ roomId, userId }: { roomId: string, userId: string }) => {
   const [stream, setStream] = useState<MediaStream | null>(null);

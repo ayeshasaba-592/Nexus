@@ -9,6 +9,9 @@ const USER_STORAGE_KEY = 'business_nexus_user';
 const TOKEN_KEY = 'token';
 const RESET_TOKEN_KEY = 'business_nexus_reset_token';
 
+// Use the Vercel Environment Variable or fallback to localhost for development
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string, role: UserRole): Promise<void> => {
     setIsLoading(true);
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await axios.post(`${API_URL}/api/auth/login`, {
         email,
         password,
         role
@@ -59,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string, role: UserRole): Promise<void> => {
     setIsLoading(true);
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/register', {
+      const response = await axios.post(`${API_URL}/api/auth/register`, {
         name,
         email,
         password,
@@ -80,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const forgotPassword = async (email: string): Promise<void> => {
     try {
-      await axios.post('http://localhost:5000/api/auth/forgot-password', { email });
+      await axios.post(`${API_URL}/api/auth/forgot-password`, { email });
       toast.success('Password reset instructions sent to your email');
     } catch (error: any) {
       toast.error(error.response?.data?.msg || 'Error sending reset email');
@@ -90,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (token: string, newPassword: string): Promise<void> => {
     try {
-      await axios.post('http://localhost:5000/api/auth/reset-password', { token, password: newPassword });
+      await axios.post(`${API_URL}/api/auth/reset-password`, { token, password: newPassword });
       toast.success('Password reset successfully');
     } catch (error: any) {
       toast.error(error.response?.data?.msg || 'Error resetting password');
@@ -108,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (userId: string, updates: Partial<User>): Promise<void> => {
     try {
       const token = localStorage.getItem(TOKEN_KEY);
-      const response = await axios.put(`http://localhost:5000/api/profile/update`, 
+      const response = await axios.put(`${API_URL}/api/profile/update`, 
         { userId, ...updates }, 
         { headers: { 'x-auth-token': token } }
       );
