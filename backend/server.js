@@ -9,25 +9,18 @@ const socketio = require('socket.io');
 const app = express();
 const server = http.createServer(app); 
 
-// --- UNIVERSAL CORS CONFIGURATION ---
-const liveOrigin = "https://nexus-qwymvaguo-ayeshasaba-592s-projects.vercel.app";
-
 // --- DYNAMIC CORS CONFIGURATION ---
 const corsOptions = {
   origin: function (origin, callback) {
-    // 1. Allow any localhost (for your local dev)
+    // 1. Allow any localhost (for your local development)
     const isLocal = !origin || origin.startsWith('http://localhost:');
     
-    // 2. Allow ANY Vercel project starting with 'nexus' and ending with '.vercel.app'
-    const isVercel = origin && origin.startsWith('https://nexus') && origin.endsWith('.vercel.app');
-    
-    // 3. Allow your specific production URL just in case
-    const isMainProd = origin === "https://nexus-qwymvaguo-ayeshasaba-592s-projects.vercel.app";
+    // 2. Allow ANY Vercel URL from your account
+    const isVercel = origin && origin.endsWith('.vercel.app');
 
-    if (isLocal || isVercel || isMainProd) {
+    if (isLocal || isVercel) {
       callback(null, true);
     } else {
-      console.log("CORS Blocked for origin:", origin); // This helps you see the blocked URL in Railway logs
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -36,12 +29,14 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'x-auth-token']
 };
 
-// Apply this to both Socket.io and Express
+// Apply this to Socket.IO
 const io = socketio(server, {
   cors: corsOptions,
-  allowEIO3: true
+  allowEIO3: true,
+  transports: ['websocket', 'polling']
 });
 
+// Apply this to Express
 app.use(cors(corsOptions)); // Using the same options for Express
 
 // 3. STATIC FOLDERS
