@@ -28,11 +28,8 @@ const corsOptions = {
   optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 };
 
-// --- CRITICAL: PRE-FLIGHT ---
-// This handles the "Options" request that browsers send before the actual POST
-app.options('*', cors(corsOptions)); 
-
 // --- MIDDLEWARE ---
+// app.use(cors()) already handles Pre-flight (OPTIONS) requests automatically
 app.use(cors(corsOptions));
 app.use(express.json());
 
@@ -53,7 +50,29 @@ const io = socketio(server, {
 });
 
 io.on('connection', (socket) => {
-  // ... (Your existing socket logic remains the same)
+  console.log('User connected to Socket:', socket.id);
+
+  socket.on('join-room', (roomId, userId) => {
+    socket.join(roomId);
+    console.log(`User ${userId} joined room: ${roomId}`);
+    socket.to(roomId).emit('user-connected', userId);
+
+    socket.on('disconnect', () => {
+      socket.to(roomId).emit('user-disconnected', userId);
+    });
+  });
+
+  socket.on('offer', (data) => {
+    socket.to(data.roomId).emit('offer', data.offer);
+  });
+
+  socket.on('answer', (data) => {
+    socket.to(data.roomId).emit('answer', data.answer);
+  });
+
+  socket.on('ice-candidate', (data) => {
+    socket.to(data.roomId).emit('ice-candidate', data.candidate);
+  });
 });
 
 // 6. DATABASE & SERVER START
