@@ -16,7 +16,8 @@ const corsOptions = {
     console.log("Request coming from origin:", origin);
 
     const isLocal = !origin || origin.startsWith('http://localhost:');
-    const isVercel = origin && origin.endsWith('.vercel.app');
+    // Using .includes() is safer for Vercel's dynamic preview URLs
+    const isVercel = origin && origin.includes('.vercel.app');
 
     if (isLocal || isVercel) {
       callback(null, true);
@@ -25,11 +26,13 @@ const corsOptions = {
     }
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow OPTIONS
+  allowedHeaders: ['Content-Type', 'x-auth-token', 'Authorization'], // Ensure these headers are allowed
   optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 };
 
 // --- MIDDLEWARE ---
-// app.use(cors()) already handles Pre-flight (OPTIONS) requests automatically
+// Handles both regular requests and the OPTIONS pre-flight check
 app.use(cors(corsOptions));
 app.use(express.json());
 
