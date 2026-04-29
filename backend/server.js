@@ -9,31 +9,28 @@ const socketio = require('socket.io');
 const app = express();
 const server = http.createServer(app); 
 
-// --- DYNAMIC CORS CONFIGURATION ---
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Log the origin to Railway logs so we can see exactly what is being blocked
-    console.log("Request coming from origin:", origin);
+// --- 1. MANUAL BRUTE-FORCE CORS (Fixes the 405 error) ---
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Allow any Vercel URL, Localhost, or request without origin
+  if (!origin || origin.includes('vercel.app') || origin.startsWith('http://localhost:')) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
 
-    const isLocal = !origin || origin.startsWith('http://localhost:');
-    // Using .includes() is safer for Vercel's dynamic preview URLs
-    const isVercel = origin && origin.includes('.vercel.app');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-auth-token, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-    if (isLocal || isVercel) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow OPTIONS
-  allowedHeaders: ['Content-Type', 'x-auth-token', 'Authorization'], // Ensure these headers are allowed
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
-};
+  // Handle Pre-flight (This is the specific fix for your 405 error)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-// --- MIDDLEWARE ---
-// Handles both regular requests and the OPTIONS pre-flight check
-app.use(cors({ origin: true, credentials: true }));
+  next();
+});
+
+// --- 2. MIDDLEWARE ---
 app.use(express.json());
 
 // 3. STATIC FOLDERS
@@ -46,9 +43,13 @@ app.use('/api/meetings', require('./routes/meetings'));
 app.use('/api/documents', require('./routes/documents')); 
 app.use('/api/transactions', require('./routes/transactions'));
 
-// 5. SOCKET.IO (Now using the same logic)
+// 5. SOCKET.IO
+// Using origin: true here to match our manual middleware
 const io = socketio(server, {
-  cors: corsOptions,
+  cors: {
+    origin: true,
+    credentials: true
+  },
   transports: ['websocket', 'polling']
 });
 
