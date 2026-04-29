@@ -33,7 +33,7 @@ const corsOptions = {
 
 // --- MIDDLEWARE ---
 // Handles both regular requests and the OPTIONS pre-flight check
-app.use(cors(corsOptions));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 // 3. STATIC FOLDERS
