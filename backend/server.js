@@ -5,33 +5,51 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http'); 
 const socketio = require('socket.io'); 
+const swaggerUi = require('swagger-ui-express'); 
+const swaggerJsdoc = require('swagger-jsdoc'); 
 
 const app = express();
 const server = http.createServer(app); 
 
-// --- 1. MANUAL BRUTE-FORCE CORS (Fixes the 405 error) ---
+// Swagger Configuration
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Nexus API Documentation',
+      version: '1.0.0',
+      description: 'API for Entrepreneur and Investor matching platform',
+    },
+    servers: [
+      {
+        url: 'https://nexus-production-9dfd.up.railway.app',
+        description: 'Production server',
+      },
+    ],
+  },
+  apis: ['./routes/*.js'], 
+};
+
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
+
+// --- 1. MANUAL BRUTE-FORCE CORS ---
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  
-  // Allow any Vercel URL, Localhost, or request without origin
   if (!origin || origin.includes('vercel.app') || origin.startsWith('http://localhost:')) {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
   }
-
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-auth-token, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-
-  // Handle Pre-flight (This is the specific fix for your 405 error)
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-
   next();
 });
 
 // --- 2. MIDDLEWARE ---
 app.use(express.json());
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs)); // Swagger Route
 
 // 3. STATIC FOLDERS
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -44,7 +62,6 @@ app.use('/api/documents', require('./routes/documents'));
 app.use('/api/transactions', require('./routes/transactions'));
 
 // 5. SOCKET.IO
-// Using origin: true here to match our manual middleware
 const io = socketio(server, {
   cors: {
     origin: true,
@@ -55,28 +72,16 @@ const io = socketio(server, {
 
 io.on('connection', (socket) => {
   console.log('User connected to Socket:', socket.id);
-
   socket.on('join-room', (roomId, userId) => {
     socket.join(roomId);
-    console.log(`User ${userId} joined room: ${roomId}`);
     socket.to(roomId).emit('user-connected', userId);
-
     socket.on('disconnect', () => {
       socket.to(roomId).emit('user-disconnected', userId);
     });
   });
-
-  socket.on('offer', (data) => {
-    socket.to(data.roomId).emit('offer', data.offer);
-  });
-
-  socket.on('answer', (data) => {
-    socket.to(data.roomId).emit('answer', data.answer);
-  });
-
-  socket.on('ice-candidate', (data) => {
-    socket.to(data.roomId).emit('ice-candidate', data.candidate);
-  });
+  socket.on('offer', (data) => socket.to(data.roomId).emit('offer', data.offer));
+  socket.on('answer', (data) => socket.to(data.roomId).emit('answer', data.answer));
+  socket.on('ice-candidate', (data) => socket.to(data.roomId).emit('ice-candidate', data.candidate));
 });
 
 // 6. DATABASE & SERVER START
