@@ -4,6 +4,26 @@ const auth = require('../middleware/auth');
 const Meeting = require('../models/Meeting');
 
 // 1. Request a Meeting
+/**
+ * @swagger
+ * /api/meetings:
+ *   post:
+ *     summary: Schedule a new meeting
+ *     tags: [Meetings]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title: {type: string}
+ *               date: {type: string, format: date-time}
+ *               invitee: {type: string}
+ *     responses:
+ *       201:
+ *         description: Meeting scheduled
+ */
 router.post('/request', auth, async (req, res) => {
   try {
     const { recipientId, title, date } = req.body;

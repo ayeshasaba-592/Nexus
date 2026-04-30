@@ -6,6 +6,16 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { body, validationResult } = require('express-validator'); // For sanitization
 
 // 1. GET TRANSACTION HISTORY
+/**
+ * @swagger
+ * /api/transactions:
+ *   get:
+ *     summary: Get transaction history
+ *     tags: [Transactions]
+ *     responses:
+ *       200:
+ *         description: List of payments and investments
+ */
 router.get('/history', auth, async (req, res) => {
   try {
     const history = await Transaction.find({ user: req.user.id }).sort({ createdAt: -1 });

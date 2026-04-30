@@ -5,7 +5,19 @@ const auth = require('../middleware/auth'); // Path to your auth middleware
 
 // @route    GET api/profile/me
 // @desc     Get current user profile
-router.get('/me', auth, async (req, res) => { // Added 'auth' here
+/**
+ * @swagger
+ * /api/profile/me:
+ *   get:
+ *     summary: Get current user's profile
+ *     tags: [Profile]
+ *     security:
+ *       - x-auth-token: []
+ *     responses:
+ *       200:
+ *         description: Profile data retrieved successfully
+ */
+router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) return res.status(404).json({ msg: 'User not found' });
@@ -16,9 +28,29 @@ router.get('/me', auth, async (req, res) => { // Added 'auth' here
 });
 
 // Update Profile API
+/**
+ * @swagger
+ * /api/profile:
+ *   post:
+ *     summary: Create or update user profile
+ *     tags: [Profile]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               bio: {type: string}
+ *               skills: {type: string}
+ *               location: {type: string}
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ */
 router.put('/update', auth, async (req, res) => {
     try {
-        // 1.  ALL FIELDS HERE s
+        // 1.  ALL FIELDS HERE 
         const { 
             userId, 
             bio, 

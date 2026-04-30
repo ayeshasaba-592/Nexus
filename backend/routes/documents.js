@@ -13,6 +13,25 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // 1. UPLOAD ROUTE
+/**
+ * @swagger
+ * /api/documents/upload:
+ *   post:
+ *     summary: Upload a document (Pitch Deck/Contract)
+ *     tags: [Documents]
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: File uploaded successfully
+ */
 router.post('/upload', [auth, upload.single('pdf')], async (req, res) => {
   try {
     const newDoc = new Document({
