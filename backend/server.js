@@ -51,6 +51,10 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs)); // Swagger Route
 
+app.get('/api-docs-json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerDocs);
+});
 // 3. STATIC FOLDERS
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
