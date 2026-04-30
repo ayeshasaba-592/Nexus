@@ -10,7 +10,7 @@ const TOKEN_KEY = 'token';
 const RESET_TOKEN_KEY = 'business_nexus_reset_token';
 
 // Use the Vercel Environment Variable or fallback to localhost for development
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://nexus-production-9dfd.up.railway.app';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
