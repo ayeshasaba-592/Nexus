@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Bell, Calendar, TrendingUp, AlertCircle, PlusCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -7,7 +7,6 @@ import { Badge } from '../../components/ui/Badge';
 import { CollaborationRequestCard } from '../../components/collaboration/CollaborationRequestCard';
 import { InvestorCard } from '../../components/investor/InvestorCard';
 import { useAuth } from '../../context/AuthContext';
-// We keep your types, but we'll fill them with real data
 import { CollaborationRequest } from '../../types';
 import { investors } from '../../data/users';
 import API from '../../services/api';
@@ -17,36 +16,33 @@ export const EntrepreneurDashboard: React.FC = () => {
   const [collaborationRequests, setCollaborationRequests] = useState<CollaborationRequest[]>([]);
   const [recommendedInvestors, setRecommendedInvestors] = useState(investors.slice(0, 3));
   
-  useEffect(() => {
-    const fetchRealMeetings = async () => {
-      if (user) {
-        try {
-          // BRIDGE: Fetching real data from your backend
-          const res = await API.get('/meetings/me');
-          
-          // Map backend data to match your frontend CollaborationRequest type
-          const formattedRequests = res.data.map((m: any) => ({
-            id: m._id,
-            senderId: m.requester._id,
-            receiverId: m.recipient._id,
-            status: m.status,
-            message: m.title, // Using title as the message for the UI
-            createdAt: m.date
-          }));
-
-          setCollaborationRequests(formattedRequests);
-        } catch (err) {
-          console.error("Error fetching real meetings:", err);
-        }
+  const fetchRealMeetings = async () => {
+    if (user) {
+      try {
+        const res = await API.get('/meetings/me');
+        const formattedRequests = res.data.map((m: any) => ({
+          id: m._id,
+          senderId: m.requester._id,
+          receiverId: m.recipient._id,
+          status: m.status,
+          message: m.title,
+          createdAt: m.date,
+          // Including sender name for the card UI
+          senderName: m.requester.name 
+        }));
+        setCollaborationRequests(formattedRequests);
+      } catch (err) {
+        console.error("Error fetching real meetings:", err);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchRealMeetings();
   }, [user]);
   
   const handleRequestStatusUpdate = async (requestId: string, status: 'accepted' | 'rejected') => {
     try {
-      // BRIDGE: Sending the status update to your PUT route
       await API.put(`/meetings/status/${requestId}`, { status });
       
       // Update UI state locally
@@ -55,8 +51,13 @@ export const EntrepreneurDashboard: React.FC = () => {
           req.id === requestId ? { ...req, status } : req
         )
       );
+      
+      alert(`Request ${status} successfully!`);
+      // Refresh to ensure all counts are updated
+      fetchRealMeetings();
     } catch (err) {
       console.error("Error updating status:", err);
+      alert("Failed to update status.");
     }
   };
   
@@ -73,15 +74,12 @@ export const EntrepreneurDashboard: React.FC = () => {
         </div>
         
         <Link to="/investors">
-          <Button
-            leftIcon={<PlusCircle size={18} />}
-          >
+          <Button leftIcon={<PlusCircle size={18} />}>
             Find Investors
           </Button>
         </Link>
       </div>
       
-      {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-primary-50 border border-primary-100">
           <CardBody>
@@ -145,7 +143,6 @@ export const EntrepreneurDashboard: React.FC = () => {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Collaboration requests */}
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader className="flex justify-between items-center">
@@ -170,14 +167,12 @@ export const EntrepreneurDashboard: React.FC = () => {
                     <AlertCircle size={24} className="text-gray-500" />
                   </div>
                   <p className="text-gray-600">No collaboration requests yet</p>
-                  <p className="text-sm text-gray-500 mt-1">When investors are interested in your startup, their requests will appear here</p>
                 </div>
               )}
             </CardBody>
           </Card>
         </div>
         
-        {/* Recommended investors */}
         <div className="space-y-4">
           <Card>
             <CardHeader className="flex justify-between items-center">
@@ -186,7 +181,6 @@ export const EntrepreneurDashboard: React.FC = () => {
                 View all
               </Link>
             </CardHeader>
-            
             <CardBody className="space-y-4">
               {recommendedInvestors.map(investor => (
                 <InvestorCard

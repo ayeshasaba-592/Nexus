@@ -1,12 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, ExternalLink, Calendar } from 'lucide-react'; // Added Calendar icon
+import { MessageCircle, Calendar } from 'lucide-react';
 import { Entrepreneur } from '../../types';
 import { Card, CardBody, CardFooter } from '../ui/Card';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import API from '../../services/api'; // Import your API bridge
+import API from '../../services/api';
 
 interface EntrepreneurCardProps {
   entrepreneur: Entrepreneur;
@@ -20,24 +20,24 @@ export const EntrepreneurCard: React.FC<EntrepreneurCardProps> = ({
   const navigate = useNavigate();
   
   const handleViewProfile = () => {
-    navigate(`/profile/entrepreneur/${entrepreneur.id}`);
+    navigate(`/profile/entrepreneur/${entrepreneur.id || entrepreneur._id}`);
   };
   
   const handleMessage = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
-    navigate(`/chat/${entrepreneur.id}`);
+    e.stopPropagation();
+    navigate(`/chat/${entrepreneur.id || entrepreneur._id}`);
   };
 
-  // NEW: Logic for Investors to request a meeting with this Entrepreneur
   const handleRequestMeeting = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
     try {
       await API.post('/meetings/request', {
-        recipientId: entrepreneur.id,
-        title: `Investment Interest: ${entrepreneur.startupName}`,
+        recipientId: entrepreneur._id || entrepreneur.id,
+        title: `Connection Request: ${entrepreneur.startupName || entrepreneur.name}`,
         date: new Date().toISOString() 
       });
-      alert(`Meeting request sent to ${entrepreneur.startupName}!`);
+      // FIXED: Corrected the name reference to avoid "undefined"
+      alert(`Connection request sent to ${entrepreneur.startupName || entrepreneur.name}!`);
     } catch (err: any) {
       const errorMsg = err.response?.data?.msg || "Failed to send request";
       alert(errorMsg);
@@ -101,7 +101,6 @@ export const EntrepreneurCard: React.FC<EntrepreneurCardProps> = ({
             Message
           </Button>
           
-          {/* UPDATED BUTTON: Now triggers the real backend request */}
           <Button
             variant="primary"
             size="sm"

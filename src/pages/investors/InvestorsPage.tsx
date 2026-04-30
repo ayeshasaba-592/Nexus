@@ -4,6 +4,7 @@ import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { InvestorCard } from '../../components/investor/InvestorCard';
 import { Investor } from '../../types';
+import API from '../../services/api'; // Use the central API config
 
 export const InvestorsPage: React.FC = () => {
   const [investors, setInvestors] = useState<Investor[]>([]);
@@ -13,37 +14,26 @@ export const InvestorsPage: React.FC = () => {
   useEffect(() => {
     const fetchInvestors = async () => {
       try {
-        const token = localStorage.getItem('token');
-        let responseData: any = null;
-
-        // 1. Try the new route we added to auth.js
-        const res = await fetch('http://localhost:5000/api/auth/users', {
-          headers: { 'x-auth-token': token || '' },
-        });
-
-        if (res.ok) {
-          responseData = await res.json();
-        } else {
-          // 2. Backup: Try the profile route if auth/users isn't ready
-          const backupRes = await fetch('http://localhost:5000/api/profile/all', {
-            headers: { 'x-auth-token': token || '' },
-          });
-          if (backupRes.ok) {
-            responseData = await backupRes.json();
-          }
-        }
-
-        if (responseData) {
-          console.log("Data loaded successfully:", responseData);
-          // Standardize the list format
-          const allData = Array.isArray(responseData) ? responseData : (responseData.users || responseData.profiles || []);
-          // Filter by 'investor' role from your MongoDB screenshot
+        setLoading(true);
+        // Using API.get handles the BaseURL and Auth headers automatically
+        const res = await API.get('/auth/users');
+        
+        if (res.data) {
+          const allData = Array.isArray(res.data) ? res.data : (res.data.users || []);
           const filtered = allData.filter((u: any) => u.role === 'investor');
           setInvestors(filtered);
         }
-
       } catch (error) {
         console.error('Fetch error:', error);
+        // Backup: Try profiles if auth/users is restricted
+        try {
+            const profileRes = await API.get('/profile/all');
+            const profileData = Array.isArray(profileRes.data) ? profileRes.data : (profileRes.data.profiles || []);
+            const filtered = profileData.filter((u: any) => u.role === 'investor');
+            setInvestors(filtered);
+        } catch (backupError) {
+            console.error('Backup fetch error:', backupError);
+        }
       } finally {
         setLoading(false);
       }
