@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://nexus-production-9dfd.up.railway.app/api',
 });
 
 // This interceptor automatically grabs your token from localStorage 
